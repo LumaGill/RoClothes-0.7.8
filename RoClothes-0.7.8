@@ -1,4 +1,4 @@
---[[	
+﻿--[[	
 
 	/ ＲＯＣＬＯＴＨＥＳ
 	Version - 0.7.8:lerp()
@@ -426,4 +426,325 @@ function RoClothes(Player)
 	GUIObject.RecolorButton = Instance.new("TextButton")
 	GUIObject.UIGradient_A14 = Instance.new("UIGradient")
 	GUIObject.UIAspectRatioConstraint_A2 = Instance.new("UIAspectRatioConstraint")
-	GUIObject.UICorner_A14 = Insta
+	GUIObject.UICorner_A14 = Instance.new("UICorner")
+	GUIObject.RecolorFrame = Instance.new("Frame")
+	GUIObject.RecolorListFrame = Instance.new("ScrollingFrame")
+	GUIObject.UIGridLayout_A1 = Instance.new("UIGridLayout")
+
+	GUIObject.GravityFrame = Instance.new("Frame")
+	GUIObject.UIGradient_A15 = Instance.new("UIGradient")
+	GUIObject.UICorner_A15 = Instance.new("UICorner")
+	GUIObject.GravityButton = Instance.new("TextButton")
+
+	GUIObject.BodyTransparencyFrame = Instance.new("Frame")
+	GUIObject.UIGradient_A18 = Instance.new("UIGradient")
+	GUIObject.UICorner_A18 = Instance.new("UICorner")
+	GUIObject.BodyTransparencyButton = Instance.new("TextButton")
+
+	GUIObject.HardcoreFrame = Instance.new("Frame")
+	GUIObject.UIGradient_A19 = Instance.new("UIGradient")
+	GUIObject.UICorner_A19 = Instance.new("UICorner")
+	GUIObject.HardcoreToggle = Instance.new("TextButton")
+
+	GUIObject.HatButton = Instance.new("ImageButton")
+
+
+	GUIObject.TailButton = Instance.new("ImageButton")
+	GUIObject.TailFrame = Instance.new("Frame")
+
+	GUIObject.tailToggleFrame = Instance.new("Frame")
+	GUIObject.UIGradient_A20 = Instance.new("UIGradient")
+	GUIObject.UICorner_A20 = Instance.new("UICorner")
+	GUIObject.tailToggleButton = Instance.new("TextButton")
+
+	-- variables --
+	local Mouse = Player:GetMouse()
+
+	local Method2CharacterFolder = game.Workspace:FindFirstChild("Method2CharacterFolder")
+
+	if not Method2CharacterFolder then
+		Method2CharacterFolder = Instance.new("Folder", game.Workspace)
+		Method2CharacterFolder.Name = "Method2CharacterFolder"
+	end
+
+	local IS = game:GetService("InsertService")
+	local UIS = game:GetService("UserInputService")
+	local TS = game:GetService("TweenService")
+	local MPS = game:GetService("MarketplaceService")
+
+	local CVersion = "0.7.8:lerp()"
+
+	local loadupBundle = nil -- replace this with a bundle name to automatically load it up on execute
+	local loadupExecute = false
+	local loadupClosed = false
+
+	local Method = 2
+	local MaxMethod = 3
+
+	local MaxBreastsType = 4
+	local MaxTorsoType = 8
+	local MaxArmType = 4
+	local MaxLegsType = 6
+	local MaxButtType = 3
+
+	local KEYBIND = Enum.KeyCode.Insert
+	local KeybindDetect = false
+
+	local hpKEYBIND = Enum.KeyCode.Equals
+	local hpKeybindDetect = false
+
+	local ClickExecute = false
+
+	local IsEnterFrame = false
+	local IsMouseDown = false
+
+	local GuiPositionStart = nil
+	local MouseDownStart = nil
+
+	local AllConnect = {}
+	local MeshEditConnect = {}
+	local Debug = false
+
+	local SelectPlayer = Player.Name
+
+	local DarkerColorPercentage = 17.75
+	local Darker2ColorPercentage = 32.75
+
+	local Circle = 2*math.pi
+	local PreviewRotate = 0
+	local PreviewRadius = 5
+	local PreviewRotateSpeed = 200
+	local CharacterPreviewLoading = false
+
+	local NPCs = {}
+
+	local PositionPhysicsMultiply = 1
+	local RotationPhysicsMultiply = 4
+
+	-- tail stuff --
+	local includedAccessoryNames = {} -- if ur tail isnt recognized as one, put its name here
+	local timeStep = 1 / 120
+	local inverseTimeStep = 1 / timeStep
+
+	local wagAnimationDropAmplitude = 0.2 -- Default: 0.2. How far in radians the tail will rotate down (90% of this value is rotating down and 10% is up)
+	local wagAnimationSwayAmplitude = 0.4 -- Default: 0.4. How far in radians the tail will rotate left and right.
+	local wagAnimationRollAmplitude = 0.5 -- Default: 0.5. How far in radians the tail will roll/twist.
+
+	local wagAnimationBlendInAlpha = 0.008
+	local wagAnimationBlendOutAlpha = 0.02
+
+	local movementDistanceThreshold = 15 -- The physics tail interprets a teleporting player as moving fast. Movements beyond this radius are ignored.
+
+	local tailVariables = { -- DO NOT CHANGE, THIS IS FOR PHYSIC CALCULATIONS
+		["Default"] = {
+			tailScaledAnimationTime = 0,
+			tailScaledTime = 0,
+			accumulator = 0,
+		}
+	}
+
+	-- advanced --
+	local globalWindEnabled = false -- A global force from workspace.GlobalWind. Default: false
+	local gravityEnabled = false -- A global force from workspace.Gravity. Default: false
+
+	-- A force (with wind fluctuation) applied to the tail every physics step.
+	local customPersistantWindForce = Vector3.new(0, 0, 0) -- Default: Vector3.new(0, 0, 0)
+	-- A force applied to the tail every physics step.
+	local customPersistantLinearForce = Vector3.new(0, 0, 0) -- Default: Vector3.new(0, 0, 0)
+
+	-- end tail stuff --
+
+	local Function = {Spring = {}}
+
+	function Function.PlayerDataDefault()
+		return {
+			Character = nil,
+
+			isTailCurrentlyEnabled = true,
+			tailSettings = {
+				tailPhysicsEnabled = true,
+
+				stiffness = 96, -- More stiffness is less flexible. Default: 96
+				damping = 9, -- Resistance due to drag (slow down). Default: 9
+				linearAmplitude = Vector3.new(20, 11, 20), -- Default: Vector3.new(48, 19, 48)
+				angularAmplitude = Vector3.new(0, 25, 0), -- Default: Vector3.new(0, 18, 0)
+				timeScale = 1, -- Creates a floaty feel if slowed down (e.g. 0.3). This also affects the animation. Default: 1
+
+				wagAnimationEnabled = true,
+				wagAnimationSpeed = 1, -- Default: 1
+			},
+
+			CurrentClothes = {},
+			ClothesRecolor = {},
+			CurrentBundle = "nil",
+			AutoExecute = true,
+			DelayTime = 1,
+			Tone = "Base",
+			BundleBodyColor = true,
+			Face = true,
+			MeshSizeLock = false,
+			AccessorySizeLock = false,
+			MeshBasePartInvisible = false,
+			BodyPartPhysics = false,
+			PhysicsObeyGravity = true,
+			CatalogUsername = "",
+			CatalogOutfitId = "",
+			CatalogClothes = {
+				Shirt = "",
+				Pants = "",
+				ShirtGraphic = "",
+			},
+			OldestClothings = {
+				Shirt = nil,
+				Pants = nil,
+				ShirtGraphic = nil,
+			},
+			CatalogAccessory = {},
+			CatalogRemove = {},
+			SkinTone = nil,
+			NippleColor = nil,
+			CockScale = 1,
+			BreastsScale = 1,
+			ButtsScale = 1,
+			LegsScale = 1,
+			BreastsType = 1,
+			TorsoType = 1,
+			ArmType = 1,
+			LegsType = 1,
+			ButtType = 1,
+			ToggleBBC = false,
+			Cooldown = false,
+			updateCooldown = false,
+			FPsnap = false,
+			FPerson = false,
+			HeadTracking = true,
+			RealtimeBodyTransparency = true,
+			OldTransparency = {},
+
+			TopRipped = false,
+			BottomRipped = false,
+			SavedPreviousHP = 0,
+			SavedTopHP = 0,
+			SavedBottomHP = 0,
+			Healing = false,
+			HealProgress = 0,
+			HardcoreHP = false,
+			TopHP = "",
+			BottomHP = "",
+			HPClothes = {
+				Shirt = "",
+				Pants = ""
+			},
+			DamageSFX = "",
+			Volume = 1,
+			TearParticles = true,
+			HealParticles = true,
+
+			PartList = Function.PartListDefault(),
+
+			LocalTransparency = {
+				["Head"] = false,
+				["Right Arm"] = false,
+				["Left Arm"] = false,
+				["Torso"] = false,
+				["Right Leg"] = false,
+				["Left Leg"] = false,
+				["Hat"] = true
+			},
+
+			CurrentPartList = {
+				Organ = {},
+				Clothes = {},
+				Accessory = {},
+				TransparencyLink = {},
+				ParentTransparency = {},
+				RealtimeUpdateList = {
+					["Mesh"] = {},
+					["Accessory"] = {},
+					["Special"] = {}
+				},
+				PartParent = {},
+				BodyPartPhysics = {},
+				physicsTails = {},
+				AreolaDecal = {},
+			},
+			ConvertedPart = {}
+		}
+	end
+
+	local R15Size = {
+		["UpperTorso"] = Vector3.new(2.043, 1.796, 1.01),
+		["UpperTorsoFemale"] = Vector3.new(2.043, 1.796, 1.01),
+		["RightLowerArm"] = Vector3.new(1, 0.78, 1),
+		["LeftLowerArm"] = Vector3.new(1, 0.78, 1),
+		["RightLowerLeg"] = Vector3.new(1, 1.231, 1.335),
+		["LeftLowerLeg"] = Vector3.new(1, 1.231, 1.335),
+	}
+
+	local R15Transparency = {
+		"UpperTorso",
+		"LowerTorso",
+		"RightUpperArm",
+		"RightLowerArm",
+		"RightHand",
+		"LeftUpperArm",
+		"LeftLowerArm",
+		"LeftHand",
+		"RightUpperLeg",
+		"RightLowerLeg",
+		"RightFoot",
+		"LeftUpperLeg",
+		"LeftLowerLeg",
+		"LeftFoot",
+	}
+
+	local R6Size = {
+		["Head"] = Vector3.new(2, 1, 1),
+		["Torso"] = Vector3.new(2, 2, 1),
+		["Left Arm"] = Vector3.new(1, 2, 1),
+		["Left Leg"] = Vector3.new(1, 2, 1),
+		["Right Arm"] = Vector3.new(1, 2, 1),
+		["Right Leg"] = Vector3.new(1, 2, 1),
+	}
+
+	local WeldCFrame = {
+		["Torso"] = CFrame.new(0, -0.2, 0),
+		["Right Arm"] = CFrame.new(0, 0.2, 0),
+		["Left Arm"] = CFrame.new(0, 0.2, 0),
+		["Right Leg"] = CFrame.new(0, 0.2, 0),
+		["Left Leg"] = CFrame.new(0, 0.2, 0)
+	}
+
+	local ConvertPart = {
+		["Torso"] = "UpperTorso",
+		["Right Arm"] = "RightLowerArm",
+		["Left Arm"] = "LeftLowerArm",
+		["Right Leg"] = "RightLowerLeg",
+		["Left Leg"] = "LeftLowerLeg"
+	}
+
+	local R6Mesh = {
+		["TorsoMale"] = "rbxassetid://456901040",
+		["TorsoFemale"] = "rbxassetid://9747912904",
+		["Right Arm"] = "rbxassetid://5062992824",
+		["Left Arm"] = "rbxassetid://5062992824",
+		["Right Leg"] = "rbxassetid://5062992824",
+		["Left Leg"] = "rbxassetid://5062992824"
+	}
+
+	--[[
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------
+	------------
